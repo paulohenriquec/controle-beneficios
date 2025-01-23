@@ -250,32 +250,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Nome do titular é obrigatório');
                     return false;
                 }
+            }else{
+                alert('Selecione ao menos um plano para o titular');
+                return false;
             }
         }
     
         // Validação de dependentes
         const dependentes = document.querySelectorAll('.dependente-card');
-        if (dependentes.length === 0) {
-            alert('Adicione pelo menos um dependente');
-            return false;
-        }
-    
-        for (const dep of dependentes) {
-            const nome = dep.querySelector('input[name$="_nome"]');
-            if (!nome.value.trim()) {
-                alert('Preencha o nome do dependente');
-                nome.focus();
-                return false;
-            }
-    
-            const planos = dep.querySelectorAll('input[type="checkbox"]');
-            const temPlano = Array.from(planos).some(input => input.checked);
-            if (!temPlano) {
-                alert('Selecione ao menos um plano para o dependente');
-                return false;
+        if (dependentes.length > 0) {
+            for (const dep of dependentes) {
+                const nome = dep.querySelector('input[name$="_nome"]');
+                if (!nome.value.trim()) {
+                    alert('Preencha o nome do dependente');
+                    nome.focus();
+                    return false;
+                }
+        
+                const planos = dep.querySelectorAll('input[type="checkbox"]');
+                const temPlano = Array.from(planos).some(input => input.checked);
+                if (!temPlano) {
+                    alert('Selecione ao menos um plano para o dependente');
+                    return false;
+                }
             }
         }
-    
+        
         return true;
     }
 

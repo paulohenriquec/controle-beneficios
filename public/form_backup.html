@@ -1,0 +1,120 @@
+<!-- public/form.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Movimentação - Controle de Benefícios</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Controle de Benefícios</h1>
+        <div class="user-info">
+            <div class="user-details">
+                <span id="userFullName"></span>
+                <small id="userProfile"></small>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Sair</button>
+        </div>
+        <nav id="menuNav" class="sidebar-nav"></nav>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <h2>Nova Movimentação</h2>
+            <form id="movimentacaoForm">
+                <!-- Dados do Titular -->
+                <div class="form-section">
+                    <h3>Dados do Titular</h3>
+                    <div class="form-group">
+                        <label>Tipo de Movimentação:</label>
+                        <select name="tipo" required>
+                            <option value="inclusao">Inclusão</option>
+                            <option value="exclusao">Exclusão</option>
+                            <option value="alteracao">Alteração</option>
+                        </select>
+                    </div>
+                
+                    <div class="form-group">
+                        <label>Matrícula do Titular:</label>
+                        <input type="text" name="matricula_titular" required>
+                    </div>
+                
+                    <div class="form-group">
+                        <label>Nome do Titular:</label>
+                        <input type="text" name="nome_titular" required>
+                    </div>
+                
+                    <div class="form-group">
+                        <label>Planos:</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" name="titular_plano_unimed">
+                                Unimed
+                            </label>
+                            <label>
+                                <input type="checkbox" name="titular_plano_uniodonto">
+                                Uniodonto
+                            </label>
+                            <label>
+                                <input type="checkbox" name="titular_plano_bradesco_saude">
+                                Bradesco Saúde
+                            </label>
+                            <label>
+                                <input type="checkbox" name="titular_plano_bradesco_dental">
+                                Bradesco Dental
+                            </label>
+                        </div>
+                    </div>
+                
+                    <div class="form-group cartoes-group">
+                        <div style="display: none;">
+                            <label>Cartão Unimed:</label>
+                            <input type="text" name="titular_cartao_unimed">
+                        </div>
+                        <div style="display: none;">
+                            <label>Cartão Uniodonto:</label>
+                            <input type="text" name="titular_cartao_uniodonto">
+                        </div>
+                        <div style="display: none;">
+                            <label>Cartão Bradesco Saúde:</label>
+                            <input type="text" name="titular_cartao_bradesco_saude">
+                        </div>
+                        <div style="display: none;">
+                            <label>Cartão Bradesco Dental:</label>
+                            <input type="text" name="titular_cartao_bradesco_dental">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dependentes -->
+                <div class="form-section" id="dependentesSection">
+                    <div class="section-header">
+                        <h3>Dependentes</h3>
+                        <button type="button" id="addDependenteBtn" class="btn btn-secondary">
+                            Adicionar Dependente
+                        </button>
+                    </div>
+                    <div id="dependentesList"></div>
+                </div>
+
+                <!-- Observações -->
+                <div class="form-group">
+                    <label>Observações:</label>
+                    <textarea name="observacoes" rows="4"></textarea>
+                </div>
+
+                <!-- Botões -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="history.back()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Movimentação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/menu.js"></script>
+    <script src="/js/form.js"></script>
+</body>
+</html>

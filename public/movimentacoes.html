@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimentações - Controle de Benefícios</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <div class="sidebar">
+        <h1>Controle de Benefícios</h1>
+        <div class="user-info">
+            <div class="user-details">
+                <span id="userFullName"></span>
+                <small id="userProfile"></small>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Sair</button>
+        </div>
+        <nav id="menuNav" class="sidebar-nav"></nav>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header-actions">
+                <h2>Movimentações Registradas</h2>
+                <!-- Filtros -->
+                <div class="filters">
+                    <input type="text" id="searchInput" placeholder="Buscar..." class="search-input">
+                    <select id="filterTipo" class="filter-select">
+                        <option value="">Todos os Tipos</option>
+                        <option value="inclusao">Inclusão</option>
+                        <option value="exclusao">Exclusão</option>
+                        <option value="alteracao">Alteração</option>
+                    </select>
+                    <select id="filterPlano" class="filter-select">
+                        <option value="">Todos os Planos</option>
+                        <option value="unimed">Unimed</option>
+                        <option value="uniodonto">Uniodonto</option>
+                        <option value="bradesco_saude">Bradesco Saúde</option>
+                        <option value="bradesco_dental">Bradesco Dental</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabela de Movimentações -->
+            <div class="table-container">
+                <table id="movimentacoesTable">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Matrícula</th>
+                            <th>Titular</th>
+                            <th>Dependente</th>
+                            <th>Planos</th>
+                            <th>Cartões</th>
+                            <th>Responsável</th>
+                            <th>Observações</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Paginação -->
+            <div class="pagination">
+                <div class="pagination-info">
+                    <span>Mostrando</span>
+                    <select id="perPage" class="per-page-select">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>por página</span>
+                </div>
+                <div class="pagination-buttons">
+                    <button id="prevPage" class="btn btn-secondary" disabled>Anterior</button>
+                    <span id="pageInfo">Página 1 de 1</span>
+                    <button id="nextPage" class="btn btn-secondary" disabled>Próxima</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/menu.js"></script>
+    <script src="/js/movimentacoes.js"></script>
+</body>
+</html>

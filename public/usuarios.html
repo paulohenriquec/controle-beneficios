@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Usuários - Controle de Benefícios</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <div class="sidebar">
+        <h1>Controle de Benefícios</h1>
+        <div class="user-info">
+            <div class="user-details">
+                <span id="userFullName"></span>
+                <small id="userProfile"></small>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Sair</button>
+        </div>
+        <nav id="menuNav" class="sidebar-nav"></nav>
+            <!-- Menu será preenchido via JavaScript -->
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="header-actions">
+                <h2>Gerenciar Usuários</h2>
+                <button id="newUserBtn" class="btn btn-primary">Novo Usuário</button>
+            </div>
+
+            <div class="table-container">
+                <table id="usuariosTable">
+                    <thead>
+                        <tr>
+                            <th>Nome Completo</th>
+                            <th>Usuário</th>
+                            <th>Perfil</th>
+                            <th>Status</th>
+                            <th>Último Acesso</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Novo Usuário -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Novo Usuário</h3>
+            <form id="userForm">
+                <input type="hidden" name="id">
+                <div class="form-group">
+                    <label>Nome Completo:</label>
+                    <input type="text" name="nome_completo" required>
+                </div>
+                <div class="form-group">
+                    <label>Usuário:</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha:</label>
+                    <input type="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label>Perfil:</label>
+                    <select name="perfil" required>
+                        <option value="editor">Editor</option>
+                        <option value="leitor">Leitor</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/js/menu.js"></script>
+    <script src="/js/usuarios.js"></script>
+</body>
+</html>

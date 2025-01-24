@@ -13,4 +13,4 @@ As páginas **status.html** e **status.js** foram criadas.
 Algumas rotas foram alteradas e o banco de dados tem uma nova coluna chamada **status**
 Algumas funções foram alteradas e implementadas em **movimentacoes.js**
 
-{c:red}Erro: Ao clicar em salvar, as alterações não estão sendo salvas e as informações permanecem as mesmas.{/c}
+**Erro: Ao clicar em salvar, as alterações não estão sendo salvas e as informações permanecem as mesmas.**

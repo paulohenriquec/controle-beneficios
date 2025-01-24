@@ -255,7 +255,8 @@ router.patch('/movimentacoes/:id', authorize(['master', 'editor']), (req, res) =
         'incluido_rateio',
         'incluido_fp760',
         'incluido_ir',
-        'cartao_uniodonto_gerado'
+        'cartao_uniodonto_gerado',
+        'status'
     ];
 
     const setClause = Object.keys(updates)
@@ -361,5 +362,49 @@ router.get('/titulares', authorize(['master', 'editor']), (req, res) => {
         res.json(rows);
     });
 });
+
+// Rota para obter uma movimentação específica
+router.get('/movimentacoes/:id', (req, res) => {
+    const { id } = req.params;
+    
+    db.get(`
+        SELECT m.*, 
+               (SELECT json_group_array(json_object(
+                   'nome', d.nome_dependente,
+                   'plano_unimed', d.plano_unimed,
+                   'plano_uniodonto', d.plano_uniodonto,
+                   'plano_bradesco_saude', d.plano_bradesco_saude,
+                   'plano_bradesco_dental', d.plano_bradesco_dental,
+                   'cartao_unimed', d.cartao_unimed,
+                   'cartao_uniodonto', d.cartao_uniodonto,
+                   'cartao_bradesco_saude', d.cartao_bradesco_saude,
+                   'cartao_bradesco_dental', d.cartao_bradesco_dental
+               ))
+               FROM movimentacoes d 
+               WHERE d.matricula_titular = m.matricula_titular 
+               AND d.nome_dependente IS NOT NULL) as dependentes
+        FROM movimentacoes m
+        WHERE m.id = ?
+    `, [id], (err, row) => {
+        if (err) {
+            console.error('Erro ao buscar movimentação:', err);
+            return res.status(400).json({ error: err.message });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Movimentação não encontrada' });
+        }
+        
+        if (row.dependentes) {
+            try {
+                row.dependentes = JSON.parse(row.dependentes);
+            } catch (e) {
+                row.dependentes = [];
+            }
+        }
+        
+        res.json(row);
+    });
+});
+
 
 module.exports = router;

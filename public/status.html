@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes da Movimentação - Controle de Benefícios</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="sidebar">
+        <img src="/img/logo.png" alt="Mineração Vale Verde" class="sidebar-logo">
+        <h1>Controle de Benefícios</h1>
+        <div class="user-info">
+            <div class="user-details">
+                <span id="userFullName"></span>
+                <small id="userProfile"></small>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Sair</button>
+        </div>
+        <nav id="menuNav" class="sidebar-nav"></nav>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="header-actions">
+                <h2>Detalhes da Movimentação</h2>
+                <div class="button-group" id="actionButtons">
+                    <button onclick="history.back()" class="btn btn-secondary">Voltar</button>
+                    <button id="editBtn" class="btn btn-primary" style="display: none;">Editar</button>
+                </div>
+            </div>
+
+            <div class="details-section">
+                <div class="details-row">
+                    <div class="details-group">
+                        <label>Status da Movimentação:</label>
+                        <select id="statusSelect" class="status-select" disabled>
+                            <option value="enviado">Enviado</option>
+                            <option value="em_andamento">Em Andamento</option>
+                            <option value="cancelado">Cancelado</option>
+                            <option value="concluido">Concluído</option>
+                        </select>
+                    </div>
+                    
+                    <div class="details-group">
+                        <label>Data de Envio:</label>
+                        <span id="dataEnvioInfo"></span>
+                    </div>
+                </div>
+
+                <div class="details-row">
+                    <div class="details-group">
+                        <label>Tipo de Movimentação:</label>
+                        <span id="tipoInfo"></span>
+                    </div>
+                    
+                    <div class="details-group">
+                        <label>Responsável:</label>
+                        <span id="responsavelInfo"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checklist-section">
+                <h3>Checklist de Processos</h3>
+                <div class="checklist-group">
+                    <label class="checklist-item">
+                        <input type="checkbox" id="checkRateio" disabled>
+                        Incluído no Rateio
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="checkFP760" disabled>
+                        Incluído no FP760
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="checkIR" disabled>
+                        Incluído no IR
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox" id="checkUniodonto" disabled>
+                        Cartão Uniodonto Gerado
+                    </label>
+                </div>
+            </div>
+
+            <div class="beneficiarios-section">
+                <div class="titular-info">
+                    <h3>Dados do Titular</h3>
+                    <div class="info-content" id="titularInfo"></div>
+                </div>
+
+                <div class="dependentes-info">
+                    <h3>Dependentes</h3>
+                    <div id="dependentesInfo"></div>
+                </div>
+
+                <div class="observacoes-info">
+                    <h3>Observações</h3>
+                    <p id="observacoesInfo"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/menu.js"></script>
+    <script src="/js/status.js"></script>
+</body>
+</html>

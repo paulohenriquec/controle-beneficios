@@ -29,7 +29,7 @@ app.use((req, res, next) => {
 app.use('/api', routes);
 
 // Rota para as páginas HTML
-app.get(['/', '/form.html', '/movimentacoes.html', '/usuarios.html', '/logs.html'], (req, res) => {
+app.get(['/', '/form.html', '/movimentacoes.html', '/usuarios.html', '/logs.html', '/status.html'], (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 

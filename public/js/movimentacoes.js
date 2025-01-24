@@ -117,42 +117,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Status
             const statusCell = row.insertCell();
-            const statusGroup = document.createElement('div');
-            statusGroup.className = 'status-group';
+            const statusSelect = document.createElement('select');
+            statusSelect.className = 'status-select';
+            statusSelect.disabled = !canEdit;
 
-            const statusChecks = [
-                { label: 'Rateio', field: 'incluido_rateio' },
-                { label: 'FP760', field: 'incluido_fp760' },
-                { label: 'IR', field: 'incluido_ir' },
-                { label: 'Cartão Uniodonto', field: 'cartao_uniodonto_gerado' }
-            ];
-
-            statusChecks.forEach((status, idx) => {
-                const statusCheck = document.createElement('div');
-                statusCheck.className = 'status-check';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `${status.field}_${mov.id}`;
-                checkbox.checked = mov[status.field];
-                checkbox.disabled = !canEdit || (!mov.plano_uniodonto && status.field === 'cartao_uniodonto_gerado');
-                
-                if (canEdit) {
-                    checkbox.addEventListener('change', () => updateStatus(mov.id, status.field, checkbox));
-                }
-
-                const label = document.createElement('label');
-                label.htmlFor = checkbox.id;
-                label.textContent = status.label;
-
-                statusCheck.append(checkbox, label);
-                statusGroup.appendChild(statusCheck);
+            ['enviado', 'em_andamento', 'cancelado', 'concluido'].forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = formatarStatus(status);
+                option.selected = mov.status === status;
+                statusSelect.appendChild(option);
             });
-
-            statusCell.appendChild(statusGroup);
-
+            
+            if (canEdit) {
+                statusSelect.addEventListener('change', () => 
+                    updateStatus(mov.id, 'status', statusSelect.value));
+            }
+            
+            statusCell.appendChild(statusSelect);
+    
             // Ações
             const acoesCell = row.insertCell();
+            const viewButton = document.createElement('button');
+            viewButton.textContent = 'Visualizar';
+            viewButton.className = 'btn btn-info';
+            viewButton.onclick = () => window.location.href = `/status.html?id=${mov.id}`;
+            acoesCell.appendChild(viewButton);
+    
             if (canDelete) {
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Excluir';
@@ -163,8 +154,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function formatarStatus(status) {
+        const formatos = {
+            'enviado': 'Enviado',
+            'em_andamento': 'Em Andamento',
+            'cancelado': 'Cancelado',
+            'concluido': 'Concluído'
+        };
+        return formatos[status] || status;
+    }
+
     // Atualizar status
-    async function updateStatus(id, field, checkbox) {
+    async function updateStatus(id, field, value) {
         try {
             const response = await fetch(`/api/movimentacoes/${id}`, {
                 method: 'PATCH',
@@ -172,20 +173,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ [field]: checkbox.checked })
+                body: JSON.stringify({ [field]: value })
             });
-
+    
             if (!response.ok) throw new Error('Erro ao atualizar status');
             
             // Atualizar a movimentação na lista em memória
             const movIndex = allMovimentacoes.findIndex(m => m.id === id);
             if (movIndex >= 0) {
-                allMovimentacoes[movIndex][field] = checkbox.checked;
+                allMovimentacoes[movIndex][field] = value;
             }
         } catch (error) {
             console.error('Erro:', error);
             alert(error.message);
-            checkbox.checked = !checkbox.checked;
         }
     }
 

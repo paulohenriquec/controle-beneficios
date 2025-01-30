@@ -14,3 +14,11 @@ Algumas rotas foram alteradas e o banco de dados tem uma nova coluna chamada **s
 Algumas funções foram alteradas e implementadas em **movimentacoes.js**
 
 **Erro: Ao clicar em salvar, as alterações não estão sendo salvas e as informações permanecem as mesmas.**
+
+## Correção do erro de edição (30/01/2025)
+
+ * O erro estava na rota **router.patch('/movimentacoes/:id')**. Ela estava recebendo as informações enviadas pela página status.js, mas a constante validfields não estava armazenando todas as informações
+ * Adicionei as demais da colunas da tabela sql na const validfields.
+ * Agora os dados do titular estão sendo atualizados corretamente no database.
+
+ **Verificar a atualização dos dados dos dependentes**

@@ -194,7 +194,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cartao_bradesco_saude: document.querySelector('[data-field="cartao_bradesco_saude"]')?.value,
                 cartao_bradesco_dental: document.querySelector('[data-field="cartao_bradesco_dental"]')?.value
             };
-    
+            
+            console.log('Dados enviados: ',data);
             const response = await fetch(`/api/movimentacoes/${movimentacaoId}`, {
                 method: 'PATCH',
                 headers: {
@@ -203,7 +204,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 },
                 body: JSON.stringify(data)
             });
-    
+            
+            console.log('Resposta do servidor: ', response);
+
             if (!response.ok) throw new Error('Erro ao atualizar movimentação');
             alert('Movimentação atualizada com sucesso!');
             carregarMovimentacao();

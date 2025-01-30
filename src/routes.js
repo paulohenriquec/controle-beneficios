@@ -251,12 +251,22 @@ router.patch('/movimentacoes/:id', authorize(['master', 'editor']), (req, res) =
     const { id } = req.params;
     const updates = req.body;
     
+    //console.log('Dados recebidos:', updates)
+
     const validFields = [
         'incluido_rateio',
         'incluido_fp760',
         'incluido_ir',
         'cartao_uniodonto_gerado',
-        'status'
+        'status',
+        'plano_uniodonto',
+        'cartao_uniodonto',
+        'plano_unimed',
+        'cartao_unimed',
+        'plano_bradesco_saude',
+        'cartao_bradesco_saude',
+        'plano_bradesco_dental',
+        'cartao_bradesco_dental'
     ];
 
     const setClause = Object.keys(updates)
@@ -279,12 +289,17 @@ router.patch('/movimentacoes/:id', authorize(['master', 'editor']), (req, res) =
         id
     ];
 
+    //console.log('SQL gerado:', updateSql);
+    //console.log('Valores:', values);
+
     db.run(updateSql, values, function(err) {
         if (err) {
             console.error('Erro ao atualizar movimentação:', err);
             return res.status(400).json({ error: err.message });
         }
         
+        //console.log('Linhas afetadas:', this.changes);
+
         logActivity(req.user.username, 'atualizar', 'movimentacoes', id, 'Status atualizado');
         res.json({ message: 'Movimentação atualizada com sucesso' });
     });

@@ -22,3 +22,8 @@ Algumas funções foram alteradas e implementadas em **movimentacoes.js**
  * Agora os dados do titular estão sendo atualizados corretamente no database.
 
  **Verificar a atualização dos dados dos dependentes**
+
+## Próximas implementações
+* Banco de dados: o dependente deverá ser armazenado da tabela dependentes; ele deverá ser associado ao titular através de um ID ou da matrícula;
+* O dependente terá os mesmos campos que o titular;
+* A tela (status.html) de visualizar as informações do beneficiário (dependente ou titular) de forma individual, ou seja, se eu incluir o dependente e o titular, ao clicar em visualizar o titular, verei apenas suas informações. Se eu clicar em visualizar na linha do dependente, verei apenas as informações do dependente. Com isso, a edição também será individual.   

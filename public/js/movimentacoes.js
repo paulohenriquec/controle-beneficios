@@ -90,11 +90,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tipo
             row.insertCell().textContent = formatarTipo(mov.tipo);
             
-            // Matrícula e nomes
+            // Matrícula
             row.insertCell().textContent = mov.matricula_titular;
-            row.insertCell().textContent = mov.nome_titular;
-            row.insertCell().textContent = mov.nome_dependente || '-';
-
+    
+            // Nome do Beneficiário
+            row.insertCell().textContent = mov.nome;
+    
+            // Grau de Parentesco
+            row.insertCell().textContent = mov.grau_parentesco;
+    
             // Planos
             const planos = [];
             if (mov.plano_unimed) planos.push('Unimed');
@@ -102,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mov.plano_bradesco_saude) planos.push('Bradesco Saúde');
             if (mov.plano_bradesco_dental) planos.push('Bradesco Dental');
             row.insertCell().textContent = planos.join(', ') || '-';
-
+    
             // Cartões
             const cartoes = [];
             if (mov.cartao_unimed) cartoes.push(`Unimed: ${mov.cartao_unimed}`);
@@ -110,17 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mov.cartao_bradesco_saude) cartoes.push(`Bradesco Saúde: ${mov.cartao_bradesco_saude}`);
             if (mov.cartao_bradesco_dental) cartoes.push(`Bradesco Dental: ${mov.cartao_bradesco_dental}`);
             row.insertCell().textContent = cartoes.join(', ') || '-';
-
+    
             // Responsável e Observações
             row.insertCell().textContent = mov.usuario_responsavel;
             row.insertCell().textContent = mov.observacoes || '-';
-
+    
             // Status
             const statusCell = row.insertCell();
             const statusSelect = document.createElement('select');
             statusSelect.className = 'status-select';
             statusSelect.disabled = !canEdit;
-
+    
             ['enviado', 'em_andamento', 'cancelado', 'concluido'].forEach(status => {
                 const option = document.createElement('option');
                 option.value = status;

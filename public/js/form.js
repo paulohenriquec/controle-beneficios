@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    console.log('Token:', token);
+    console.log('UserName:', userName);
+
     // Mapeamento de planos para campos de cartão
     const planoToCartao = {
         'unimed': 'unimed',
@@ -39,14 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 throw new Error('Erro ao carregar titulares');
             }
-
+    
             titularesCache = await response.json();
             titularExistente.innerHTML = '<option value="">Selecione um titular...</option>';
             
             titularesCache.forEach(titular => {
                 const option = document.createElement('option');
-                option.value = titular.matricula_titular;
-                option.textContent = `${titular.nome_titular} (${titular.matricula_titular})`;
+                option.value = titular.matricula;
+                option.textContent = `${titular.nome_titular} (${titular.matricula})`;
                 titularExistente.appendChild(option);
             });
         } catch (error) {
@@ -70,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isCadastroCompleto) {
             titularExistente.value = '';
             infoTitular.style.display = 'none';
+            resetTitularPlanos();
         } else {
             form.querySelector('input[name="matricula_titular"]').value = '';
             form.querySelector('input[name="nome_titular"]').value = '';
@@ -79,14 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Adicionar listener para seleção de titular
     titularExistente.addEventListener('change', () => {
-        const titular = titularesCache.find(t => t.matricula_titular === titularExistente.value);
+        const titular = titularesCache.find(t => t.matricula === titularExistente.value);
         
         if (titular) {
-            document.getElementById('infoMatricula').textContent = titular.matricula_titular;
-            document.getElementById('infoNome').textContent = titular.nome_titular;
-            // Atualizar campos ocultos para o formulário
-            form.querySelector('input[name="matricula_titular"]').value = titular.matricula_titular;
+            // Preencher os campos ocultos do formulário
+            form.querySelector('input[name="matricula_titular"]').value = titular.matricula;
             form.querySelector('input[name="nome_titular"]').value = titular.nome_titular;
+    
+            // Atualizar a exibição das informações
+            document.getElementById('infoMatricula').textContent = titular.matricula;
+            document.getElementById('infoNome').textContent = titular.nome_titular;
             infoTitular.style.display = 'block';
         } else {
             infoTitular.style.display = 'none';
@@ -174,12 +180,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         Remover Dependente
                     </button>
                 </div>
-
+    
                 <div class="form-group">
                     <label>Nome do Dependente:</label>
                     <input type="text" name="dependente_${id}_nome" required>
                 </div>
-
+    
+                <div class="form-group">
+                    <label>Grau de Parentesco:</label>
+                    <select name="dependente_${id}_grau_parentesco" required>
+                        <option value="">Selecione...</option>
+                        <option value="Cônjuge">Cônjuge</option>
+                        <option value="Filho(a)">Filho(a)</option>
+                        <option value="Pai/Mãe">Pai/Mãe</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+    
                 <div class="form-group">
                     <label>Planos:</label>
                     <div class="checkbox-group">
@@ -201,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>
                     </div>
                 </div>
-
+    
                 <div class="form-group cartoes-group">
                     <div style="display: none;">
                         <label>Cartão Unimed:</label>
@@ -223,6 +240,115 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }
+
+    async function carregarInformacoesTitular(matricula) {
+        try {
+            const response = await fetch(`/api/titulares/${matricula}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+    
+            if (!response.ok) {
+                throw new Error('Erro ao carregar informações do titular');
+            }
+    
+            const titular = await response.json();
+            
+            // Preencher campos do titular
+            form.querySelector('input[name="matricula_titular"]').value = titular.matricula;
+            form.querySelector('input[name="nome_titular"]').value = titular.nome_titular;
+    
+            // Atualizar checkboxes dos planos
+            form.querySelector('input[name="titular_plano_unimed"]').checked = titular.plano_unimed;
+            form.querySelector('input[name="titular_plano_uniodonto"]').checked = titular.plano_uniodonto;
+            form.querySelector('input[name="titular_plano_bradesco_saude"]').checked = titular.plano_bradesco_saude;
+            form.querySelector('input[name="titular_plano_bradesco_dental"]').checked = titular.plano_bradesco_dental;
+    
+            // Desabilitar campos do titular
+            form.querySelector('input[name="matricula_titular"]').disabled = true;
+            form.querySelector('input[name="nome_titular"]').disabled = true;
+            form.querySelectorAll('input[name^="titular_plano_"]').forEach(input => {
+                input.disabled = true;
+            });
+    
+            // Atualizar cartões se necessário
+            if (titular.plano_unimed) {
+                const cartaoInput = form.querySelector('input[name="titular_cartao_unimed"]');
+                cartaoInput.value = titular.cartao_unimed || '';
+                cartaoInput.parentElement.style.display = 'block';
+                cartaoInput.disabled = true;
+            }
+            // Repetir para outros planos...
+    
+            // Atualizar exibição das informações
+            document.getElementById('infoMatricula').textContent = titular.matricula;
+            document.getElementById('infoNome').textContent = titular.nome_titular;
+            const planos = [];
+            if (titular.plano_unimed) planos.push('Unimed');
+            if (titular.plano_uniodonto) planos.push('Uniodonto');
+            if (titular.plano_bradesco_saude) planos.push('Bradesco Saúde');
+            if (titular.plano_bradesco_dental) planos.push('Bradesco Dental');
+            document.getElementById('infoPlanos').textContent = planos.join(', ') || 'Nenhum';
+            
+            infoTitular.style.display = 'block';
+    
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao carregar informações do titular');
+        }
+    }
+    
+    // Atualizar o listener de mudança do titular
+    titularExistente.addEventListener('change', () => {
+        const titular = titularesCache.find(t => t.matricula === titularExistente.value);
+        
+        if (titular) {
+            // Preencher os campos do formulário
+            form.querySelector('input[name="matricula_titular"]').value = titular.matricula;
+            form.querySelector('input[name="nome_titular"]').value = titular.nome_titular;
+    
+            // Atualizar checkboxes dos planos e campos de cartão
+            const planos = [
+                'unimed',
+                'uniodonto',
+                'bradesco_saude',
+                'bradesco_dental'
+            ];
+    
+            planos.forEach(plano => {
+                const checkbox = form.querySelector(`input[name="titular_plano_${plano}"]`);
+                const cartaoInput = form.querySelector(`input[name="titular_cartao_${plano}"]`);
+                const planoAtivo = titular[`plano_${plano}`];
+                const numeroCartao = titular[`cartao_${plano}`];
+    
+                if (checkbox) {
+                    checkbox.checked = planoAtivo;
+                    checkbox.disabled = true;
+                }
+    
+                if (cartaoInput) {
+                    cartaoInput.value = numeroCartao || '';
+                    cartaoInput.disabled = true;
+                    cartaoInput.parentElement.style.display = planoAtivo ? 'block' : 'none';
+                }
+            });
+    
+            // Atualizar informações exibidas
+            document.getElementById('infoMatricula').textContent = titular.matricula;
+            document.getElementById('infoNome').textContent = titular.nome_titular;
+            
+            const planosAtivos = planos
+                .filter(plano => titular[`plano_${plano}`])
+                .map(plano => plano.replace('_', ' ').replace(/(^\w|\s\w)/g, l => l.toUpperCase()));
+            
+            document.getElementById('infoPlanos').textContent = planosAtivos.join(', ') || 'Nenhum';
+            infoTitular.style.display = 'block';
+        } else {
+            infoTitular.style.display = 'none';
+            resetTitularPlanos();
+        }
+    });
 
     // Funções de validação
     function validateForm() {
@@ -282,19 +408,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Enviar formulário
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-
+    
         if (!validateForm()) {
             return;
         }
-
+    
         const formData = new FormData(form);
+        const isCadastroCompleto = tipoCadastro.value === 'completo';
+    
         const data = {
             tipo: formData.get('tipo'),
             matricula_titular: formData.get('matricula_titular'),
             nome_titular: formData.get('nome_titular'),
             usuario_responsavel: userName,
             observacoes: formData.get('observacoes'),
-            titular: {
+            dependentes: []
+        };
+    
+        // Adicionar dados do titular apenas se for cadastro completo
+        if (isCadastroCompleto) {
+            data.titular = {
                 planos: {
                     unimed: formData.get('titular_plano_unimed') === 'on',
                     uniodonto: formData.get('titular_plano_uniodonto') === 'on',
@@ -307,17 +440,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     bradesco_saude: formData.get('titular_cartao_bradesco_saude'),
                     bradesco_dental: formData.get('titular_cartao_bradesco_dental')
                 }
-            },
-            dependentes: []
-        };
-
+            };
+        }
+    
         // Coletar dados dos dependentes
         for (let i = 1; i <= dependenteCount; i++) {
             const dependenteElement = document.getElementById(`dependente_${i}`);
             if (!dependenteElement) continue;
-
+    
             const dependente = {
                 nome: formData.get(`dependente_${i}_nome`),
+                grau_parentesco: formData.get(`dependente_${i}_grau_parentesco`),
                 planos: {
                     unimed: formData.get(`dependente_${i}_plano_unimed`) === 'on',
                     uniodonto: formData.get(`dependente_${i}_plano_uniodonto`) === 'on',
@@ -333,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             data.dependentes.push(dependente);
         }
-
+    
         try {
             const response = await fetch('/api/movimentacoes', {
                 method: 'POST',
@@ -343,24 +476,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify(data)
             });
-
+    
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Erro ao registrar movimentação');
             }
-
+    
             alert('Movimentação registrada com sucesso!');
             form.reset();
             dependentesList.innerHTML = '';
             dependenteCount = 0;
-
-            // Esconder todos os campos de cartão após reset
-            titularPlanoInputs.forEach(input => {
-                const planoFull = input.name.replace('titular_plano_', '');
-                const cartaoInput = document.querySelector(`input[name="titular_cartao_${planoFull}"]`);
-                if (cartaoInput) {
-                    cartaoInput.parentElement.style.display = 'none';
-                }
+    
+            // Limpar campos de cartão
+            document.querySelectorAll('.cartoes-group div').forEach(div => {
+                div.style.display = 'none';
             });
         } catch (error) {
             console.error('Erro:', error);

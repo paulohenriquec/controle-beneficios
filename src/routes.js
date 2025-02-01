@@ -6,35 +6,53 @@ const db = require('./database');
 const { generateToken, verifyToken, authorize, logActivity } = require('./auth');
 
 // Rota de login
-// Rota de login
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
-    db.get('SELECT * FROM usuarios WHERE username = ? AND ativo = true', 
-        [username], 
-        async (err, user) => {
-            if (err) {
-                return res.status(400).json({ error: err.message });
+    try {
+        db.get('SELECT * FROM usuarios WHERE username = ? AND ativo = true', 
+            [username], 
+            async (err, user) => {
+                if (err) {
+                    console.error('Erro na consulta:', err);
+                    return res.status(400).json({ error: err.message });
+                }
+
+                if (!user) {
+                    return res.status(401).json({ error: 'Usuário não encontrado ou inativo' });
+                }
+
+                const isValid = await bcrypt.compare(password, user.password);
+                if (!isValid) {
+                    return res.status(401).json({ error: 'Senha incorreta' });
+                }
+
+                // Gerar token
+                const token = generateToken({
+                    id: user.id,
+                    username: user.username,
+                    perfil: user.perfil
+                });
+
+                // Atualizar último login
+                db.run('UPDATE usuarios SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+
+                // Enviar resposta com token e dados do usuário
+                res.json({ 
+                    token,
+                    username: user.username,
+                    nome_completo: user.nome_completo,
+                    perfil: user.perfil 
+                });
+
+                // Log de atividade
+                logActivity(user.username, 'login', 'usuarios', user.id, 'Login realizado com sucesso');
             }
-
-            if (!user || !(await bcrypt.compare(password, user.password))) {
-                return res.status(401).json({ error: 'Credenciais inválidas' });
-            }
-
-            // Atualizar último login
-            db.run('UPDATE usuarios SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
-
-            const token = generateToken(user);
-            res.json({ 
-                token, 
-                username: user.username,
-                nome_completo: user.nome_completo,
-                perfil: user.perfil 
-            });
-
-            logActivity(user.username, 'login', 'usuarios', user.id, 'Login realizado com sucesso');
-        }
-    );
+        );
+    } catch (error) {
+        console.error('Erro no login:', error);
+        res.status(500).json({ error: 'Erro interno no servidor' });
+    }
 });
 
 // Middleware de autenticação para rotas protegidas
@@ -107,6 +125,7 @@ router.patch('/usuarios/:id', authorize(['master']), (req, res) => {
 });
 
 // Rotas de movimentações
+
 // Rota para criar movimentação
 router.post('/movimentacoes', authorize(['master', 'editor']), async (req, res) => {
     const {
@@ -115,111 +134,188 @@ router.post('/movimentacoes', authorize(['master', 'editor']), async (req, res) 
         nome_titular,
         usuario_responsavel,
         observacoes,
-        titular,
+        titular, // dados dos planos do titular
         dependentes
     } = req.body;
 
-    // Iniciar transação
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
 
         try {
-            // Inserir movimentação do titular se houver planos selecionados
-            if (titular && Object.values(titular.planos).some(p => p)) {
-                db.run(`
-                    INSERT INTO movimentacoes (
-                        tipo,
+            // Primeiro, verificar se o titular existe
+            db.get('SELECT id, nome FROM titulares WHERE matricula = ?', [matricula_titular], (err, existingTitular) => {
+                if (err) {
+                    console.error('Erro ao buscar titular:', err);
+                    db.run('ROLLBACK');
+                    return res.status(500).json({ error: err.message });
+                }
+
+                const processarDependentes = (titularId) => {
+                    let promises = [];
+                    
+                    // Se houver dados do titular, registrar movimentação do titular
+                    if (titular && Object.values(titular.planos).some(p => p)) {
+                        db.run(`
+                            INSERT INTO movimentacoes (
+                                tipo,
+                                beneficiario_tipo,
+                                titular_id,
+                                usuario_responsavel,
+                                observacoes,
+                                created_by,
+                                data_envio,
+                                status
+                            ) VALUES (?, 'titular', ?, ?, ?, ?, datetime('now', 'localtime'), 'enviado')
+                        `, [
+                            tipo,
+                            titularId,
+                            usuario_responsavel,
+                            observacoes,
+                            req.user.username
+                        ], function(err) {
+                            if (err) throw err;
+                        });
+
+                        // Atualizar planos do titular
+                        db.run(`
+                            UPDATE titulares SET
+                            plano_unimed = ?,
+                            plano_uniodonto = ?,
+                            plano_bradesco_saude = ?,
+                            plano_bradesco_dental = ?,
+                            cartao_unimed = ?,
+                            cartao_uniodonto = ?,
+                            cartao_bradesco_saude = ?,
+                            cartao_bradesco_dental = ?,
+                            updated_at = datetime('now', 'localtime')
+                            WHERE id = ?
+                        `, [
+                            titular.planos.unimed || false,
+                            titular.planos.uniodonto || false,
+                            titular.planos.bradesco_saude || false,
+                            titular.planos.bradesco_dental || false,
+                            titular.cartoes.unimed || null,
+                            titular.cartoes.uniodonto || null,
+                            titular.cartoes.bradesco_saude || null,
+                            titular.cartoes.bradesco_dental || null,
+                            titularId
+                        ]);
+                    }
+
+                    // Processar dependentes se houver
+                    if (dependentes && dependentes.length > 0) {
+                        dependentes.forEach(dep => {
+                            // Inserir dependente
+                            db.run(`
+                                INSERT INTO dependentes (
+                                    titular_id,
+                                    nome,
+                                    grau_parentesco,
+                                    plano_unimed,
+                                    plano_uniodonto,
+                                    plano_bradesco_saude,
+                                    plano_bradesco_dental,
+                                    cartao_unimed,
+                                    cartao_uniodonto,
+                                    cartao_bradesco_saude,
+                                    cartao_bradesco_dental
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            `, [
+                                titularId,
+                                dep.nome,
+                                dep.grau_parentesco,
+                                dep.planos.unimed || false,
+                                dep.planos.uniodonto || false,
+                                dep.planos.bradesco_saude || false,
+                                dep.planos.bradesco_dental || false,
+                                dep.cartoes.unimed || null,
+                                dep.cartoes.uniodonto || null,
+                                dep.cartoes.bradesco_saude || null,
+                                dep.cartoes.bradesco_dental || null
+                            ], function(err) {
+                                if (err) throw err;
+
+                                const dependenteId = this.lastID;
+
+                                // Registrar movimentação do dependente
+                                db.run(`
+                                    INSERT INTO movimentacoes (
+                                        tipo,
+                                        beneficiario_tipo,
+                                        titular_id,
+                                        dependente_id,
+                                        usuario_responsavel,
+                                        observacoes,
+                                        created_by,
+                                        data_envio,
+                                        status
+                                    ) VALUES (?, 'dependente', ?, ?, ?, ?, ?, datetime('now', 'localtime'), 'enviado')
+                                `, [
+                                    tipo,
+                                    titularId,
+                                    dependenteId,
+                                    usuario_responsavel,
+                                    observacoes,
+                                    req.user.username
+                                ]);
+                            });
+                        });
+                    }
+
+                    // Commit após todas as operações
+                    db.run('COMMIT', function(err) {
+                        if (err) {
+                            console.error('Erro ao commitar transação:', err);
+                            db.run('ROLLBACK');
+                            return res.status(500).json({ error: err.message });
+                        }
+                        res.json({ message: 'Movimentação registrada com sucesso' });
+                    });
+                };
+
+                // Se o titular não existe, criar primeiro
+                if (!existingTitular) {
+                    db.run(`
+                        INSERT INTO titulares (
+                            matricula,
+                            nome,
+                            plano_unimed,
+                            plano_uniodonto,
+                            plano_bradesco_saude,
+                            plano_bradesco_dental,
+                            cartao_unimed,
+                            cartao_uniodonto,
+                            cartao_bradesco_saude,
+                            cartao_bradesco_dental,
+                            active
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)
+                    `, [
                         matricula_titular,
                         nome_titular,
-                        usuario_responsavel,
-                        observacoes,
-                        data_envio,
-                        plano_unimed,
-                        plano_uniodonto,
-                        plano_bradesco_saude,
-                        plano_bradesco_dental,
-                        cartao_unimed,
-                        cartao_uniodonto,
-                        cartao_bradesco_saude,
-                        cartao_bradesco_dental,
-                        created_by,
-                        created_at
-                    ) VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
-                `, [
-                    tipo,
-                    matricula_titular,
-                    nome_titular,
-                    usuario_responsavel,
-                    observacoes,
-                    titular.planos.unimed || false,
-                    titular.planos.uniodonto || false,
-                    titular.planos.bradesco_saude || false,
-                    titular.planos.bradesco_dental || false,
-                    titular.cartoes.unimed || null,
-                    titular.cartoes.uniodonto || null,
-                    titular.cartoes.bradesco_saude || null,
-                    titular.cartoes.bradesco_dental || null,
-                    req.user.username
-                ]);
-            }
-
-            // Inserir movimentações dos dependentes
-            if (dependentes && dependentes.length > 0) {
-                const stmt = db.prepare(`
-                    INSERT INTO movimentacoes (
-                        tipo,
-                        matricula_titular,
-                        nome_titular,
-                        nome_dependente,
-                        usuario_responsavel,
-                        observacoes,
-                        data_envio,
-                        plano_unimed,
-                        plano_uniodonto,
-                        plano_bradesco_saude,
-                        plano_bradesco_dental,
-                        cartao_unimed,
-                        cartao_uniodonto,
-                        cartao_bradesco_saude,
-                        cartao_bradesco_dental,
-                        created_by,
-                        created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
-                `);
-
-                dependentes.forEach(dep => {
-                    stmt.run([
-                        tipo,
-                        matricula_titular,
-                        nome_titular,
-                        dep.nome,
-                        usuario_responsavel,
-                        observacoes,
-                        dep.planos.unimed || false,
-                        dep.planos.uniodonto || false,
-                        dep.planos.bradesco_saude || false,
-                        dep.planos.bradesco_dental || false,
-                        dep.cartoes.unimed || null,
-                        dep.cartoes.uniodonto || null,
-                        dep.cartoes.bradesco_saude || null,
-                        dep.cartoes.bradesco_dental || null,
-                        req.user.username
-                    ]);
-                });
-
-                stmt.finalize();
-            }
-
-            db.run('COMMIT');
-            
-            logActivity(req.user.username, 'criar', 'movimentacoes', null, 
-                `Nova movimentação registrada ${titular ? 'para ' + nome_titular : ''} ${dependentes ? 'com ' + dependentes.length + ' dependente(s)' : ''}`);
-            
-            res.json({ message: 'Movimentação registrada com sucesso' });
+                        titular?.planos.unimed || false,
+                        titular?.planos.uniodonto || false,
+                        titular?.planos.bradesco_saude || false,
+                        titular?.planos.bradesco_dental || false,
+                        titular?.cartoes.unimed || null,
+                        titular?.cartoes.uniodonto || null,
+                        titular?.cartoes.bradesco_saude || null,
+                        titular?.cartoes.bradesco_dental || null
+                    ], function(err) {
+                        if (err) {
+                            console.error('Erro ao criar titular:', err);
+                            db.run('ROLLBACK');
+                            return res.status(500).json({ error: err.message });
+                        }
+                        processarDependentes(this.lastID);
+                    });
+                } else {
+                    processarDependentes(existingTitular.id);
+                }
+            });
         } catch (error) {
+            console.error('Erro na transação:', error);
             db.run('ROLLBACK');
-            console.error('Erro ao registrar movimentação:', error);
-            res.status(400).json({ error: error.message });
+            res.status(500).json({ error: error.message });
         }
     });
 });
@@ -229,13 +325,52 @@ router.get('/movimentacoes', (req, res) => {
     db.all(`
         SELECT 
             m.*,
-            ur.nome_completo as responsavel_nome,
-            u.nome_completo as created_by_nome,
-            ua.nome_completo as updated_by_nome
+            t.matricula as matricula_titular,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.nome
+                ELSE d.nome
+            END as nome,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN 'Titular'
+                ELSE d.grau_parentesco
+            END as grau_parentesco,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_unimed
+                ELSE d.plano_unimed
+            END as plano_unimed,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_uniodonto
+                ELSE d.plano_uniodonto
+            END as plano_uniodonto,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_bradesco_saude
+                ELSE d.plano_bradesco_saude
+            END as plano_bradesco_saude,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_bradesco_dental
+                ELSE d.plano_bradesco_dental
+            END as plano_bradesco_dental,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_unimed
+                ELSE d.cartao_unimed
+            END as cartao_unimed,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_uniodonto
+                ELSE d.cartao_uniodonto
+            END as cartao_uniodonto,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_bradesco_saude
+                ELSE d.cartao_bradesco_saude
+            END as cartao_bradesco_saude,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_bradesco_dental
+                ELSE d.cartao_bradesco_dental
+            END as cartao_bradesco_dental,
+            ur.nome_completo as responsavel_nome
         FROM movimentacoes m
+        JOIN titulares t ON m.titular_id = t.id
+        LEFT JOIN dependentes d ON m.dependente_id = d.id
         LEFT JOIN usuarios ur ON m.usuario_responsavel = ur.username
-        LEFT JOIN usuarios u ON m.created_by = u.username
-        LEFT JOIN usuarios ua ON m.updated_by = ua.username
         ORDER BY m.created_at DESC
     `, [], (err, rows) => {
         if (err) {
@@ -366,15 +501,58 @@ router.get('/logs', authorize(['master']), (req, res) => {
 //Rota para buscar titulares
 router.get('/titulares', authorize(['master', 'editor']), (req, res) => {
     db.all(`
-        SELECT DISTINCT matricula_titular, nome_titular 
-        FROM movimentacoes 
-        WHERE nome_dependente IS NULL 
-        ORDER BY nome_titular
+        SELECT 
+            id, 
+            matricula, 
+            nome as nome_titular,
+            plano_unimed,
+            plano_uniodonto,
+            plano_bradesco_saude,
+            plano_bradesco_dental,
+            cartao_unimed,
+            cartao_uniodonto,
+            cartao_bradesco_saude,
+            cartao_bradesco_dental
+        FROM titulares 
+        WHERE active = true 
+        ORDER BY nome
     `, [], (err, rows) => {
         if (err) {
+            console.error('Erro ao buscar titulares:', err);
             return res.status(400).json({ error: err.message });
         }
         res.json(rows);
+    });
+});
+
+// Rota para buscar informações detalhadas de um titular
+router.get('/titulares/:matricula', authorize(['master', 'editor']), (req, res) => {
+    const { matricula } = req.params;
+    
+    db.get(`
+        SELECT 
+            id,
+            matricula,
+            nome as nome_titular,
+            plano_unimed,
+            plano_uniodonto,
+            plano_bradesco_saude,
+            plano_bradesco_dental,
+            cartao_unimed,
+            cartao_uniodonto,
+            cartao_bradesco_saude,
+            cartao_bradesco_dental
+        FROM titulares 
+        WHERE matricula = ? AND active = true
+    `, [matricula], (err, row) => {
+        if (err) {
+            console.error('Erro ao buscar titular:', err);
+            return res.status(400).json({ error: err.message });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Titular não encontrado' });
+        }
+        res.json(row);
     });
 });
 
@@ -383,22 +561,59 @@ router.get('/movimentacoes/:id', (req, res) => {
     const { id } = req.params;
     
     db.get(`
-        SELECT m.*, 
-               (SELECT json_group_array(json_object(
-                   'nome', d.nome_dependente,
-                   'plano_unimed', d.plano_unimed,
-                   'plano_uniodonto', d.plano_uniodonto,
-                   'plano_bradesco_saude', d.plano_bradesco_saude,
-                   'plano_bradesco_dental', d.plano_bradesco_dental,
-                   'cartao_unimed', d.cartao_unimed,
-                   'cartao_uniodonto', d.cartao_uniodonto,
-                   'cartao_bradesco_saude', d.cartao_bradesco_saude,
-                   'cartao_bradesco_dental', d.cartao_bradesco_dental
-               ))
-               FROM movimentacoes d 
-               WHERE d.matricula_titular = m.matricula_titular 
-               AND d.nome_dependente IS NOT NULL) as dependentes
+        SELECT 
+            m.*,
+            t.matricula as matricula_titular,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.nome
+                ELSE d.nome
+            END as nome,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN 'Titular'
+                ELSE d.grau_parentesco
+            END as grau_parentesco,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_unimed
+                ELSE d.plano_unimed
+            END as plano_unimed,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_uniodonto
+                ELSE d.plano_uniodonto
+            END as plano_uniodonto,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_bradesco_saude
+                ELSE d.plano_bradesco_saude
+            END as plano_bradesco_saude,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.plano_bradesco_dental
+                ELSE d.plano_bradesco_dental
+            END as plano_bradesco_dental,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_unimed
+                ELSE d.cartao_unimed
+            END as cartao_unimed,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_uniodonto
+                ELSE d.cartao_uniodonto
+            END as cartao_uniodonto,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_bradesco_saude
+                ELSE d.cartao_bradesco_saude
+            END as cartao_bradesco_saude,
+            CASE 
+                WHEN m.beneficiario_tipo = 'titular' THEN t.cartao_bradesco_dental
+                ELSE d.cartao_bradesco_dental
+            END as cartao_bradesco_dental,
+            ur.nome_completo as responsavel_nome,
+            m.incluido_rateio,
+            m.incluido_fp760,
+            m.incluido_ir,
+            m.cartao_uniodonto_gerado,
+            m.status
         FROM movimentacoes m
+        JOIN titulares t ON m.titular_id = t.id
+        LEFT JOIN dependentes d ON m.dependente_id = d.id
+        LEFT JOIN usuarios ur ON m.usuario_responsavel = ur.username
         WHERE m.id = ?
     `, [id], (err, row) => {
         if (err) {
@@ -407,14 +622,6 @@ router.get('/movimentacoes/:id', (req, res) => {
         }
         if (!row) {
             return res.status(404).json({ error: 'Movimentação não encontrada' });
-        }
-        
-        if (row.dependentes) {
-            try {
-                row.dependentes = JSON.parse(row.dependentes);
-            } catch (e) {
-                row.dependentes = [];
-            }
         }
         
         res.json(row);

@@ -31,44 +31,63 @@ db.serialize(() => {
 
     // Tabela de Titulares
     db.run(`CREATE TABLE IF NOT EXISTS titulares (
-        matricula TEXT PRIMARY KEY,
-        nome TEXT NOT NULL
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        matricula TEXT NOT NULL UNIQUE,
+        nome TEXT NOT NULL,
+        plano_unimed BOOLEAN DEFAULT FALSE,
+        plano_uniodonto BOOLEAN DEFAULT FALSE,
+        plano_bradesco_saude BOOLEAN DEFAULT FALSE,
+        plano_bradesco_dental BOOLEAN DEFAULT FALSE,
+        cartao_unimed TEXT,
+        cartao_uniodonto TEXT,
+        cartao_bradesco_saude TEXT,
+        cartao_bradesco_dental TEXT,
+        active BOOLEAN DEFAULT TRUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME
     )`);
 
     // Tabela de Dependentes
     db.run(`CREATE TABLE IF NOT EXISTS dependentes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        matricula_titular TEXT,
+        titular_id INTEGER NOT NULL,
         nome TEXT NOT NULL,
-        FOREIGN KEY (matricula_titular) REFERENCES titulares(matricula)
+        grau_parentesco TEXT NOT NULL,
+        plano_unimed BOOLEAN DEFAULT FALSE,
+        plano_uniodonto BOOLEAN DEFAULT FALSE,
+        plano_bradesco_saude BOOLEAN DEFAULT FALSE,
+        plano_bradesco_dental BOOLEAN DEFAULT FALSE,
+        cartao_unimed TEXT,
+        cartao_uniodonto TEXT,
+        cartao_bradesco_saude TEXT,
+        cartao_bradesco_dental TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME,
+        active BOOLEAN DEFAULT TRUE,
+        FOREIGN KEY (titular_id) REFERENCES titulares(id)
     )`);
 
     // Tabela de Movimentações
     db.run(`CREATE TABLE IF NOT EXISTS movimentacoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tipo TEXT NOT NULL,
-        matricula_titular TEXT NOT NULL,
-        nome_titular TEXT NOT NULL,
-        nome_dependente TEXT,
+        tipo TEXT NOT NULL CHECK (tipo IN ('inclusao', 'exclusao', 'alteracao')),
+        beneficiario_tipo TEXT NOT NULL CHECK (beneficiario_tipo IN ('titular', 'dependente')),
+        titular_id INTEGER NOT NULL,
+        dependente_id INTEGER,
         usuario_responsavel TEXT NOT NULL,
         observacoes TEXT,
-        data_envio DATETIME NOT NULL,
-        plano_unimed BOOLEAN,
-        plano_uniodonto BOOLEAN,
-        plano_bradesco_saude BOOLEAN,
-        plano_bradesco_dental BOOLEAN,
-        cartao_unimed TEXT,
-        cartao_uniodonto TEXT,
-        cartao_bradesco_saude TEXT,
-        cartao_bradesco_dental TEXT,
+        status TEXT DEFAULT 'enviado' CHECK (status IN ('enviado', 'em_andamento', 'cancelado', 'concluido')),
         incluido_rateio BOOLEAN DEFAULT FALSE,
         incluido_fp760 BOOLEAN DEFAULT FALSE,
         incluido_ir BOOLEAN DEFAULT FALSE,
         cartao_uniodonto_gerado BOOLEAN DEFAULT FALSE,
+        data_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_by TEXT,
         updated_at DATETIME,
+        FOREIGN KEY (titular_id) REFERENCES titulares(id),
+        FOREIGN KEY (dependente_id) REFERENCES dependentes(id),
         FOREIGN KEY (usuario_responsavel) REFERENCES usuarios(username),
         FOREIGN KEY (created_by) REFERENCES usuarios(username),
         FOREIGN KEY (updated_by) REFERENCES usuarios(username)

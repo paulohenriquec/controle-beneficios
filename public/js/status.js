@@ -47,16 +47,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('responsavelInfo').textContent = mov.usuario_responsavel;
         document.getElementById('observacoesInfo').textContent = mov.observacoes || '-';
     
-        // Dados do Titular
-        const titularInfo = document.getElementById('titularInfo');
-        titularInfo.innerHTML = `
+        // Dados do Beneficiário
+        const beneficiarioInfo = document.getElementById('beneficiarioInfo');
+        beneficiarioInfo.innerHTML = `
             <div class="info-row">
                 <label>Matrícula:</label>
                 <input type="text" value="${mov.matricula_titular}" disabled class="edit-input" data-field="matricula_titular">
             </div>
             <div class="info-row">
                 <label>Nome:</label>
-                <input type="text" value="${mov.nome_titular}" disabled class="edit-input" data-field="nome_titular">
+                <input type="text" value="${mov.nome}" disabled class="edit-input" data-field="nome">
+            </div>
+            <div class="info-row">
+                <label>Tipo de Beneficiário:</label>
+                <input type="text" value="${mov.grau_parentesco}" disabled class="edit-input" data-field="grau_parentesco">
             </div>
             <div class="info-row">
                 <label>Planos:</label>
@@ -86,50 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </div>
         `;
-
-        // Dependentes
-        const dependentesInfo = document.getElementById('dependentesInfo');
-        if (mov.dependentes && mov.dependentes.length > 0) {
-            dependentesInfo.innerHTML = mov.dependentes.map((dep, index) => `
-                <div class="dependente-card" data-index="${index}">
-                    <div class="info-row">
-                        <label>Nome:</label>
-                        <input type="text" value="${dep.nome}" disabled class="edit-input" data-field="nome">
-                    </div>
-                    <div class="info-row">
-                        <label>Planos:</label>
-                        <div class="checkbox-group">
-                            <label><input type="checkbox" ${dep.plano_unimed ? 'checked' : ''} disabled data-field="plano_unimed">Unimed</label>
-                            <label><input type="checkbox" ${dep.plano_uniodonto ? 'checked' : ''} disabled data-field="plano_uniodonto">Uniodonto</label>
-                            <label><input type="checkbox" ${dep.plano_bradesco_saude ? 'checked' : ''} disabled data-field="plano_bradesco_saude">Bradesco Saúde</label>
-                            <label><input type="checkbox" ${dep.plano_bradesco_dental ? 'checked' : ''} disabled data-field="plano_bradesco_dental">Bradesco Dental</label>
-                        </div>
-                    </div>
-                    <div class="cartoes-group">
-                        ${dep.cartao_unimed ? `<div class="info-row"><label>Cartão Unimed:</label><input type="text" value="${dep.cartao_unimed}" disabled class="edit-input" data-field="cartao_unimed"></div>` : ''}
-                        ${dep.cartao_uniodonto ? `<div class="info-row"><label>Cartão Uniodonto:</label><input type="text" value="${dep.cartao_uniodonto}" disabled class="edit-input" data-field="cartao_uniodonto"></div>` : ''}
-                        ${dep.cartao_bradesco_saude ? `<div class="info-row"><label>Cartão Bradesco Saúde:</label><input type="text" value="${dep.cartao_bradesco_saude}" disabled class="edit-input" data-field="cartao_bradesco_saude"></div>` : ''}
-                        ${dep.cartao_bradesco_dental ? `<div class="info-row"><label>Cartão Bradesco Dental:</label><input type="text" value="${dep.cartao_bradesco_dental}" disabled class="edit-input" data-field="cartao_bradesco_dental"></div>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            dependentesInfo.innerHTML = '<p class="no-data">Nenhum dependente cadastrado</p>';
-        }
-
-        // Adicionar event listeners para os checkboxes
-        document.querySelectorAll('.plano-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const plano = this.dataset.plano;
-                const cartaoDiv = document.getElementById(`cartao_${plano}`);
-                if (cartaoDiv) {
-                    cartaoDiv.style.display = this.checked ? 'block' : 'none';
-                    if (!this.checked) {
-                        cartaoDiv.querySelector('input').value = '';
-                    }
-                }
-            });
-        });
     }
     
     editBtn.addEventListener('click', () => {
